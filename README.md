@@ -16,6 +16,14 @@ Builds are accomplished via [docker-compose](https://docs.docker.com/compose/), 
 will spin up a true powerhouse of a Commodore 64 development container then run through
 the client build procedure.
 
+Latest Release
+--------------
+
+The latest release of the Habitat client can be downloaded here:
+
+-  [Habitat-A.d64](https://s3.amazonaws.com/habiclient/ssalevan/habiclient/5/5.1/Dist/Habitat-A.d64)
+-  [Habitat-B.d64](https://s3.amazonaws.com/habiclient/ssalevan/habiclient/5/5.1/Dist/Habitat-B.d64)
+
 Please Note
 -----------
 
