@@ -24,4 +24,4 @@ addons:
   artifacts:
     s3_region: us-east-1
     paths:
-      - $(ls dist/* | tr '\n' ':')
+      - $(ls Dist/* | tr '\n' ':')
