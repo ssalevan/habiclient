@@ -25,4 +25,5 @@ addons:
   artifacts:
     s3_region: us-east-1
     paths:
-      - $(ls Dist/* | tr '\n' ':')
+      - ./Dist/Habitat-A.d64
+      - ./Dist/Habitat-B.d64
