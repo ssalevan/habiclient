@@ -26,7 +26,8 @@ Dist/
 all.prg
 beta.jlist
 beta.list
-class_equates.m
+./class_equates.m
+Tools/muddle/class_equates.m
 mcmg.prg
 
 # Prerequisites
