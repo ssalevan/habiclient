@@ -1,0 +1,84 @@
+# docker-compose file (as it is generated dynamically)
+docker-compose.yml
+
+# Binaries
+Tools/a65toprg/a65toprg
+Tools/filldisk/filldisk
+Tools/habdiska/habdiska
+Tools/macross/macross
+Tools/mcmgtrim/mcmgtrim
+Tools/mtobin/mtobin
+Tools/muddle/jmuddle
+Tools/muddle/muddle
+Tools/muddle/puddle
+Tools/slinky/slinky
+
+# Habitat client binaries
+Dist/
+*.bin
+*.dat
+!id_file.dat
+*.d64
+*.exo
+*.pl1
+*.pwbin
+*.sym
+all.prg
+beta.jlist
+beta.list
+class_equates.m
+mcmg.prg
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+!loader.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf

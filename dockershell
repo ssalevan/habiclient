@@ -1,0 +1,22 @@
+#!/bin/bash
+# Initiates a build of the Habitat client.
+
+set -ueo pipefail
+
+cat << EOF > ./docker-compose.yml
+---
+version: '3'
+services:
+  habiclient:
+    build: .
+    image: philcollins/habiclient
+    tty: true
+    command: /bin/bash
+    volumes:
+      - .:/habiclient
+EOF
+
+echo 'Launching the Habiclient shell...'
+docker-compose run habiclient bash
+
+rm -f ./docker-compose.yml

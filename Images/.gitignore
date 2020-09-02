@@ -1,0 +1,5 @@
+Heads/*.bin
+Heads/_tmp_*
+Props/*.bin
+Props/_tmp_*
+!*.bin
