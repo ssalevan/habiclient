@@ -19,6 +19,7 @@ before_install:
 
 script:
   - ./dockerbuild
+  - find .
 
 addons:
   artifacts:
