@@ -27,8 +27,23 @@ init_vblank::
 	moveb	#special_mode,	graphics_mode
 	moveb	#0b00010000,	current_screen
 
-	movew	#normal_NMI,	NMI_routine
-	movew	#Normal_BRK,	BRK_routine
+	; Write NMI vector to RAM at $FFFA-$FFFB.
+	; Cannot use movew here — Macross makeFirstByte extracts the
+	; low byte of the address constant ($FA), generating STA $FA
+	; (zero-page) instead of the intended STA $FFFA (absolute).
+	lda	#/normal_NMI
+	sta	0xfffa
+	sta	0x0318
+	lda	#?normal_NMI
+	sta	0xfffb
+	sta	0x0319
+	; Write BRK/RESET vector to RAM at $FFFC-$FFFD.
+	lda	#/Normal_BRK
+	sta	0xfffc
+	sta	0x0316
+	lda	#?Normal_BRK
+	sta	0xfffd
+	sta	0x0317
 	moveb	#0b00011011,	VIC_control	; allow VBLANK
 	jsr	set_bitmap_on_vector
 	moveb	#0b10000001,	IRQ_flag
@@ -155,14 +170,6 @@ bitmap_off_start::
 	lda	latch
 	if (zero) {
 		inc	latch				; 6.2 Super Hack
-		lda	rs232_timing			; 
-		sta	timer_a				; 
-		sta	timer_b				; 6.3
-		lda	rs232_timing+1			; 
-		sta	timer_a+1			;
-		sta	timer_b+1			; 6.3
-		lda	rs232_enable			; 
-		sta	NMI_interrupt			; 
 		jsr	maintain_rs232
 		jsr	maintain_sounds
 		jsr	vblank_keys
@@ -203,6 +210,7 @@ blank_IRQ::
 	moveb	#1, 		IRQ_flag
 	lda	interrupt_control	; resume interrupts
 	cli
+
 	lda	latch
 	if (zero) {
 		inc	latch
@@ -214,7 +222,7 @@ blank_IRQ::
 	jmp	standard_interrupt_exit
 
 set_bitmap_on_vector:
-	movew	#bitmap_on_IRQ,	IRQ_routine	; in TEXT display mode
+	movew	#bitmap_on_IRQ,	IRQ_routine
 	moveb	#(quip_y),	IRQ_scanline
 	rts
 
@@ -244,6 +252,6 @@ mif (debug_mode) {
 		jmp	c_NMI			; go to fastlink
 	}
 }
-	jmp	rs232_NMI
+	jmp	acia_NMI			; drain ACIA data, RTI
 
 

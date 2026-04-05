@@ -99,7 +99,10 @@ hi_copy:		lda	y[back_drop]
 ;	clear background screen, or draw the grid
 ;****************************************
 clear_back_drop::
-	fill	back_drop, (0x1400), 0xff		;clear back_drop
+	inc	latch				; protect fill's temp_address
+						; from vblank subroutine clobbering
+	fill	back_drop, (0x1400), 0xff	;clear back_drop
+	dec	latch
 	rts
 
 screen::		byte	0

@@ -1,11 +1,11 @@
-FROM centos
+FROM rockylinux:9
 
 # Adds the Habitat client repository.
 ADD . /habiclient
 
 # Installs all build dependencies.
 RUN dnf groupinstall -y "Development Tools" && \
-  dnf install -y dnf-plugins-core epel-release glibc-devel.i686 libasan.i686 svn wget && \
+  dnf install -y dnf-plugins-core epel-release glibc-devel glibc-devel.i686 libgcc.i686 libasan svn wget && \
   git clone https://github.com/cc65/cc65 && \
   svn checkout https://svn.code.sf.net/p/tass64/code/trunk tass64 && \
   git clone https://bitbucket.org/PTV_Claus/cc1541.git && \

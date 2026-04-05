@@ -18,7 +18,7 @@ MACROSS_OBJECTS = actions_$(PROC).o buildStuff1.o buildStuff2.o		\
 # to simulate subclasses and uses int and void * interchangably a
 # bunch. gcc calls these the int-conversion and
 # incompatible-pointer-types warnings.
-CFLAGS=-m32 -O2 -ansi -DYYDEBUG -DTARGET_CPU=CPU_$(PROC)
+CFLAGS=-m32 -O2 -ansi -fcommon -DYYDEBUG -DTARGET_CPU=CPU_$(PROC)
 LDFLAGS=-m32
 
 # If yacc is notionally present on a system, it's usually actually

@@ -179,6 +179,10 @@ track_map:
 
 ;======================================================================
 read_TS:
+	lda	use_cart
+	beq	read_TS_disk
+	jmp	read_TS_cart		; in nmi_trampoline.m (org $4800)
+read_TS_disk:
 	stx ts_x_save
 	sty ts_y_save
 retry_sector:
@@ -213,6 +217,10 @@ soft_disk_error:
 
 ts_y_save:	byte 0
 ts_x_save:	byte 0
+
+; read_TS_cart + cumul_sectors moved to nmi_trampoline.m (org $4800)
+; to shrink OBJS sequential pack and fit sfx below $4000
+
 ;======================================================================
 ;	variables and tables
 ;======================================================================

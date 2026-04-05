@@ -1,5 +1,11 @@
+# Mac droppings
+.DS_Store
+
 # docker-compose file (as it is generated dynamically)
 docker-compose.yml
+
+# test things
+screenshots/
 
 # Binaries
 Tools/a65toprg/a65toprg
@@ -26,9 +32,21 @@ Dist/
 all.prg
 beta.jlist
 beta.list
-./class_equates.m
+/class_equates.m
 Tools/muddle/class_equates.m
 mcmg.prg
+
+# Python things
+__pycache__/
+debug*.py
+test*.py
+vice_*.py
+pipe_*.py
+find_*.py
+
+# Build intermediates
+*.raw
+*.mon
 
 # Prerequisites
 *.d

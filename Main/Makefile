@@ -29,7 +29,8 @@ mem_use.obj\
 actions.obj\
 page.obj\
 walkto.obj\
-sfx.obj
+sfx.obj\
+nmi_trampoline.obj
 
 OBJS2 = vectors.obj\
 vblank.obj\
@@ -45,10 +46,11 @@ comm_control.obj\
 protocol.obj\
 balloons.obj\
 database.obj\
-basic_loader.obj\
 farmers_variables.obj\
 datavars.obj\
 dataheap.obj
+
+OBJS_TAIL = basic_loader.obj
 
 OBJS3 =  saver.obj\
 diskinit.obj\
@@ -75,7 +77,7 @@ all: new
 clean:
 	rm -f *.obj
 
-new: $(OBJS) $(OBJS2) $(OBJS3) $(OBJS4) $(OBJS5) $(OBJS6) $(OBJS7)
+new: $(OBJS) $(OBJS2) $(OBJS3) $(OBJS4) $(OBJS5) $(OBJS6) $(OBJS7) $(OBJS_TAIL)
 	echo 'slinking'
 	../Tools/slinky/slinky -e -o ../all.out -n -m ../all.sym\
  -l 0x0800 $(OBJS)\
@@ -84,8 +86,9 @@ new: $(OBJS) $(OBJS2) $(OBJS3) $(OBJS4) $(OBJS5) $(OBJS6) $(OBJS7)
  -l 0x6400 $(OBJS5)\
  -l 0x6a00 $(OBJS3)\
  -l 0x8000 $(OBJS2)\
+ -l 0xc000 $(OBJS_TAIL)\
  -l 0xff40 $(OBJS6) > SIZE
 	../Tools/a65toprg/a65toprg ../all.out ../all.prg > SIZE2
 	../Tools/mcmgtrim/mcmgtrim ../all.prg ../mcmg.prg
-	exomizer sfx '$$0816' -omcmg.exo -x 'LDA $$D020 EOR #$$05 STA $$D020' ../mcmg.prg
+	exomizer sfx '$$0816' -o mcmg.exo ../mcmg.prg
 	cp mcmg.exo ../Launcher

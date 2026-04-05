@@ -3,7 +3,7 @@
 SRC = buildStuff.c lexer.l main.c muddle.y output.c joutput.c semantics.c symbols.c
 OBJ = buildStuff.o main.o muddle.o lexer.o semantics.o symbols.o output.o joutput.o
 
-CFLAGS=-m32 -O2 -ansi -DYYDEBUG
+CFLAGS=-m32 -O2 -ansi -fcommon -DYYDEBUG
 YACC=bison -y
 LEX=flex
 

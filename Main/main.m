@@ -25,6 +25,12 @@ begin::
 ;	Initialization
 ;****************************************
 start_of_program:
+	lda	use_acia_flag			; save before init_disk KERNAL
+	sta	saved_acia_flag			;  I/O corrupts page 3 workspace
+	lda	use_cart_flag			; set cart mode flag directly
+	sta	use_cart			;  (farmers_variables survive farmers_init)
+	lda	disk_b_base_bank_flag		; set Disk B base bank number
+	sta	disk_b_base_bank
 	jsr	save_zpage
 	jsr	init_disk
 	jsr	farmers_init			; init vblank, and var space

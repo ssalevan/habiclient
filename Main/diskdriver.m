@@ -21,6 +21,11 @@ macro	send_to_disk	val {
 ;	address of data to be = save_address
 ;----------------------------------------------------------------------
 save_sector::
+	lda	use_cart
+	if (!zero) {
+		clc
+		rts			; can't write to ROM
+	}
 	stx	host_name_a		;save the file name
 	sty	host_name_b
 	movew   buffer_pointer,save_lda+1
@@ -236,7 +241,7 @@ send_disk_bits:					; 1s in y reg will be sent
 	and	#0b00000100			; preserve rs232 status
 	ora	bits
 	sta	0xdd00
-	moveb	rs232_enable, NMI_interrupt
+	moveb	#0, NMI_interrupt		; ACIA NMIs handled by trampoline
 	cli
 	rts
 

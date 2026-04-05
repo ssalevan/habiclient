@@ -7,7 +7,8 @@ define	command_entry		=	0x00
 define	async_entry		=	0xff
 
 define	top_of_heap		=	0xeb40
-define	OBUFFS			=	0x4800	; max_buffs*128 (512)
+define	OBUFFS			=	0x48fc	; max_buffs*128 (256=$48FC-$49FB)
+				; After nmi_trampoline+read_TS_cart+acia_poll at $4800
 
 define	request_buffers		=	0x6800	; max_request_buffers*128(256)
 define	region_contents_list	=	0x6900	; region_max_capacity (128)
@@ -197,7 +198,7 @@ define	text_window_size	= 7
 define	text_window_width	= 40
 define	max_balloon_size	= 3
 
-define	max_BUFFS			=	4	; protocol out buffs
+define	max_BUFFS			=	2	; protocol out buffs (256 bytes)
 define	max_req_buffers			=	2	; valid 2,4,8,16
 define	response_free_space		=	768
 define	buffer_base			=	response_buffers
@@ -339,6 +340,47 @@ define	real_clock		=	0xdd08
 define	NMI_interrupt		=	0xdd0d
 define	NMI_timer_a		=	0xdd0e
 define	NMI_timer_b		=	0xdd0f
+
+define  ACIA_base = 0xdf80
+define  ACIA_data = ACIA_base
+define  ACIA_status = ACIA_base + 1
+define  ACIA_command = ACIA_base + 2
+define  ACIA_control = ACIA_base + 3
+
+define  use_acia_flag   = 0x0210	; launcher writes $FF here for SwiftLink
+						; Must survive Exomizer SFX decompression.
+						; Unsafe: $0297 (KERNAL NMI overwrites),
+						; $0334-$03FF (SFX decrunch tables zeroed),
+						; $0330-$0333 (SFX code residue).
+						; $0210 is in the KERNAL input buffer,
+						; untouched by SFX (which only writes
+						; $00FD-$01FB and the target range $0806+).
+						; No interrupts fire during decrunch.
+
+define  use_cart_flag   = 0x0211	; boot code writes $FF for EasyFlash cart mode
+define  disk_b_base_bank_flag = 0x0212	; boot code writes Disk B starting bank number
+
+; EasyFlash cartridge registers
+define  EF_bank    = 0xDE00		; bank select (0-63)
+define  EF_control = 0xDE02		; control: bits 0-1 = mode
+define  EF_8K      = 0x03		; ROML visible on U64 (serve_rom=1)
+define  EF_OFF     = 0x04		; cart fully disabled — $01 ROML hides ROML only when LORAM=0,
+					;  but IRQ handler sets LORAM=1 via bank_IO_in → crash
+
+define  ACIA_CMD_RX_IRQ = 0b00001001	; $09: DTR on, RX NMI enabled, /RTS low, TX on
+						; Bit 0=1: DTR active (low)
+						; Bit 1=0: Receiver IRQ enabled
+						; Bits 3-2=10: /RTS low, TX on
+						; NOTE: bits 3-2=10 enables TX IRQ on real
+						; WDC 65C51 (TDRE bug). VICE works fine.
+						; Real hardware may need the acia_poll_rx
+						; NMI toggle to re-arm edges.
+define  ACIA_CMD_NO_IRQ = 0b00001011	; $0B: same but RX NMI disabled (bit 1 set)
+define  ACIA_CTL_1200   = 0b00011000	; 1200 baud, 8N1, internal clock
+define  ACIA_CTL_9600   = 0b00011110	; 9600 baud, 8N1, internal clock
+define  ACIA_ST_RDRF    = 0b00001000	; Receive Data Register Full
+define  ACIA_ST_TDRE    = 0b00010000	; Transmit Data Register Empty
+define  ACIA_ST_IRQ     = 0b10000000	; IRQ (NMI) occurred
 
 define	ioinit	=	0xff84
 define	setlfs	=	0xffba

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Initiates a build of the Habitat client.
+# Builds the Habitat EasyFlash CRT cartridge image + zip.
 
 set -ueo pipefail
 
@@ -11,7 +11,7 @@ services:
     build: .
     platform: linux/amd64
     image: philcollins/habiclient
-    command: bash -c 'export CC65_HOME=/usr/share/cc65 && make clean && make'
+    command: bash -c 'export CC65_HOME=/usr/share/cc65 && make clean && make cart'
     volumes:
       - .:/habiclient
 EOF

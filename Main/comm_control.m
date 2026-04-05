@@ -165,6 +165,17 @@ one_more_try:
 	    lda	y[@response_data]
 	    sta	packet_stream_seq_header	; definately non-zero
 	}
+	; If no packet found (Z=1), poll ACIA + run RS232I while we
+	; hold the lock.  The busy-wait loop in Get_next_packet_stream_byte
+	; calls us thousands of times per second.  The lock prevents the
+	; vblank handler's maintain_rs232 from calling RS232I, so received
+	; bytes pile up in the ring buffer unprocessed — heartbeats and
+	; ACKs never fire.  Calling RS232I here ensures input is processed
+	; and the protocol stays alive during the wait.
+	bne	exit_check		; packet found → skip poll
+	jsr	acia_poll_helper	; drain TX/RX, run RS232I (at $4800)
+	test16	next_packet,next_avail_byte
+	bne	one_more_try		; packet ready → go set it up
 exit_check:
 	php
 	inc	p_send_packet_lock

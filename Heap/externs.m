@@ -1,6 +1,7 @@
 	extern
 
 	static_end_of_heap,
+	end_of_tables,
 	title_music_start,
 	farmers_init,
 	init_disk,

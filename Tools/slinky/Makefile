@@ -7,7 +7,7 @@ SLINKY_OBJECTS = builtins.o debugPrint.o errorStuff.o expr.o		\
                  map.o poke.o read.o relocate.o slinkyTables.o		\
                  write.o
 
-CFLAGS=-m32 -g -ansi -DYYDEBUG -DTARGET_CPU=CPU_$(PROC)
+CFLAGS=-m32 -g -ansi -fcommon -DYYDEBUG -DTARGET_CPU=CPU_$(PROC)
 LDFLAGS=-m32
 
 # If yacc is notionally present on a system, it's usually actually

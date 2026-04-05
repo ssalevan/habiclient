@@ -44,4 +44,16 @@
 	Im_sitting,
 	new_region_flag,
 	change_background_object,
-	async_workspace
+	async_workspace,
+	normal_NMI,
+	acia_open,
+	acia_resume,
+	acia_nmi_pending,
+	saved_acia_flag,
+	use_cart,
+	disk_b_base_bank,
+	nmi_trampoline,
+	read_TS_cart,
+	ts_x_save,
+	ts_y_save,
+	acia_poll_helper

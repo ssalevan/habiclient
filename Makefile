@@ -1,4 +1,4 @@
-.PHONY: behaviors clean charset disks diska diskb jmuddle muddle tools
+.PHONY: behaviors clean charset disks diska diskb jmuddle muddle tools cart
 
 all: diska diskb
 
@@ -63,6 +63,15 @@ charset: tools
 	echo making on_disk_charset.bin
 	./Tools/macross/macross -c -p -o on_disk_charset.obj on_disk_charset.m
 	./Tools/mtobin/mtobin on_disk_charset.obj on_disk_charset.dat
+
+cart: diska diskb
+	python3 build_crt.py Launcher/habitat.prg mcmg.prg Dist/Habitat-B.d64 Dist/Habitat.crt
+	rm -rf Dist/Habitat-U64
+	mkdir -p Dist/Habitat-U64
+	cp Dist/Habitat.crt Dist/Habitat-U64/Habitat.crt
+	cp Dist/habitat-u64.cfg Dist/Habitat-U64/habitat-u64.cfg
+	cp Dist/README.txt Dist/Habitat-U64/README.txt
+	cd Dist && zip -r Habitat-U64.zip Habitat-U64/
 
 diskb: mkdist behaviors images sounds muddle jmuddle charset
 	dd if=image.dat of=image1.dat bs=30720 count=1        # block size 30720 == 0x7800

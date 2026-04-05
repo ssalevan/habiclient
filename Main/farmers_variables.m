@@ -153,6 +153,9 @@ write_to_paper_mode::	block 1		; 0-normal nz=page query
 
 bitmap_on_flag::	block	1
 NMI_save_IO::		block	1
+use_acia::		block	1	; 0 = user port, nonzero = ACIA/SwiftLink
+use_cart::		block	1	; 0 = disk, nonzero = EasyFlash cartridge
+disk_b_base_bank::	block	1	; EasyFlash bank where Disk B data starts
 latch::			block	1
 screen_is_off::		block	1
 

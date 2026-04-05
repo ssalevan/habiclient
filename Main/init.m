@@ -3,6 +3,8 @@
 ; 	init	stuff
 
 counter:	byte	0
+saved_acia_flag::
+	byte	0
 
 farmers_init::
 
@@ -24,7 +26,12 @@ farmers_init::
 	moveb	#black,		background_color
 
 	fill	start_variables,(end_variables-start_variables-1),0
-	fill	OBUFFS,512,0
+	lda	#0			; zero OBUFFS (inline, avoids DoFill bug)
+	tay
+	do {
+	    sta	y[OBUFFS]
+	    iny
+	} until (zero)
 	fill	RSINBF,192,0
 	fill	request_buffers,512,0
 	fill	qlink_message_text, 186, 0
@@ -182,53 +189,11 @@ greetings:
 	byte	0,0,0,0,0,0,0,0,0
 
 insert_disk_message:
-	string	"Press Alt-N or Cmd-N, then any key."
-
-define	baud_300		=	0b00000110
-define	Kernal_control_reg	=	0x293
-define	Kernal_half_time	=	0x295
-define	Kernal_timing		=	0x299
+	string	"Alt-N or Cmd-N, then any key."
 
 rs232_open::
-	moveb	Kernal_control_reg, rs232_control
-	and	#baud_300
-	cmp	#baud_300		; slower modem, faster throttle
-	if (equal) {
-		moveb	#/(Default_throttle_decrement/3),throttle_selfmod+1
-		moveb	#?(Default_throttle_decrement/3),throttle_selfmod+3
-		moveb	#/(Default_throttle_increment/3),throttle_selfmod2+1
-		moveb	#?(Default_throttle_increment/3),throttle_selfmod2+3
-	}
-	movew	Kernal_half_time, rs232_half_time
-	movew	Kernal_timing, rs232_timing
-
-	ldy	#00
-	sty	rs232_enable
-	sty	rs232_status			; clear status
-	sty	rs232_command
-	ldx	#9				; bits ?
-	stx	rs232_bit_count
-	ldx	#0xff
-	stx	rs232_start_bit_flag
-	stx	rs232_output_bit
-
-	moveb	rs232_rcv_buffer_end,rs232_rcv_buffer_start
-	moveb	rs232_send_buffer_end,rs232_send_buffer_start
-
-	movew	#rs232_input,rs232_input_buffer
-	movew	#rs232_output,rs232_output_buffer
-
-	lda	#0b10010000
-	jsr	rs232_init_port
-
-	lda	rs232_timing
-	sta	timer_a
-	lda	rs232_timing+1
-	sta	timer_a+1			; setup output timer
-	lda	#0b00010001
-	sta	NMI_timer_a
-
-	rts
+	moveb	saved_acia_flag, use_acia
+	jmp	acia_open
 
 save_zpage::				; and pages 2 & 3 as at bootime
 	ldy	#0			; & copy music into heap
@@ -362,5 +327,9 @@ wait::				; in y = number of loops
 	rts
 
 resume_communications::
+	lda	use_acia
+	if (!zero) {
+		jsr	acia_resume
+	}
 	jmp	Im_alive
 

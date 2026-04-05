@@ -35,7 +35,9 @@ define	OFF_TYPE 	=	7
 define	OFF_DATA 	=	8
 define	OFF_PCRC 	=	OFF_CRC + 4	; OFFSET OF 1ST BYTE PAST CRC
 
-define	ACKNUM		=	8
+define	ACKNUM		=	2	; ACK every 2 packets (was 8)
+					; Smaller window prevents server stall
+					; when server window < ACKNUM
 define	poly_low	=	0xa0
 define	poly_high	=	0x01
 define	heartbeat_value	=	2
@@ -75,12 +77,16 @@ p_packet_type:		byte	0
 ; -----------------------------------------------------------------
 RIBTM:
 maintain_rs232::
+	save_and_bank_IO_in		; ACIA TX/RX every vblank
+	jsr	acia_put
+	jsr	acia_poll_rx
+	restore_IO
+
 	lda	p_send_packet_lock
 	if (minus) {rts}		; no if in RS232O or re-entrant
 
 	moveb	#0xff,p_send_packet_lock
 	jsr	p_send_a_buffer		; if we can, put buffer out!
-
 	jsr	RS232I			; take care of input
 	clearb	p_send_packet_lock
 	rts
@@ -156,10 +162,6 @@ p_transmit_buffer:
 	    cmp	#end_of_message
 	} while (!equal)
 	stx	rs232_send_buffer_end
-
-	save_and_bank_IO_in		; just in case!?
-	jsr	rs232_put		; start xmission
-	restore_IO			; jic
 
 	moveb	#heartbeat_value, heartbeat_wait	; somethins goin on
 	moveb	#ACKNUM,ACKNED		; count down for courtesy ACK to host.
@@ -683,18 +685,20 @@ send_heartbeat:
 	lda	INITST
 	if (!zero) {rts}
 	moveb	#heartbeat_value, heartbeat_wait
-	lda	buffs
-	if (!zero) {
+	; Original code skipped the heartbeat when buffs=0 (no pending
+	; output buffers).  The Neohabitat server sends unsolicited data
+	; for game events, but during quiet periods (e.g. single-player,
+	; or waiting at disk swap prompt) both sides can go silent when
+	; no buffers are pending.  Always send the heartbeat to prevent
+	; the connection from going idle and timing out.
 send_bad_packet::
-	    lda	fastlink_on
-	    if (!zero) {rts}
-	    dec	heartbeat_counter
-	    lda	#HEARTB
-	    JMP	SND_UNUM
-	}
-	rts
+	lda	fastlink_on
+	if (!zero) {rts}
+	dec	heartbeat_counter
+	lda	#HEARTB
+	JMP	SND_UNUM
 
-p_throw_away_input:
+p_throw_away_input::
 IGNORE:
 	clearb	COUNT
 	sta	SYNCD_UP

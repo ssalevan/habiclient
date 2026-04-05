@@ -1,6 +1,7 @@
 
 define	filter_voice		=	3
 
+
 define	SID			=	0xd400
 define	SID_freq		=	SID+0x0
 define	SID_pulse_width		=	SID+0x2
@@ -466,4 +467,6 @@ voice_bit::
 	byte	1,2,4,8,16,32,64
 voice_bit_mask:
 	byte	~1,~2,~4,~8,~16,~32,~64
+
+; static_end_of_heap moved back to dataheap.m (sfx relocated to $4800 via org)
 

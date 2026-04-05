@@ -62,6 +62,18 @@ skip_write:
 	} while (plus)
 
 get_QLINK_disk::
+	lda	use_cart
+	if (!zero) {
+		; EasyFlash reset: copy stub to ZP, switch Ultimax, JMP $E000
+		sei
+		ldx	#(cart_reset_end - cart_reset_stub - 1)
+		do {
+		    lda	x[cart_reset_stub]
+		    sta	x[0x0080]
+		    dex
+		} while (plus)
+		jmp	0x0080
+	}
 	movew	#swap_please,	source
 	jsr	display_and_wait_for_key
 
@@ -122,12 +134,35 @@ field_update::
 	    sta	y[sort_y]				; not in use
 	    inc	update_buffer_pointer
 	} while (!zero)					; 256 bytes!
+	lda	use_cart
+	if (!zero) {
+		rts				; can't write to ROM
+	}
 	movew	#0x100,number_of_bytes
 	movew	#sort_y,buffer_pointer
 	jsr	d_write_segment
 	rts
 
 swap_disk::
+	lda	use_cart
+	if (zero) {
+		lda	use_cart_flag		; first call: fill zeroed use_cart,
+		if (zero) {			;  but boot flag $0211 still intact
+			jmp	swap_disk_disk	; neither set → real disk mode
+		}
+		sta	use_cart		; restore cart flags from boot
+		lda	disk_b_base_bank_flag
+		sta	disk_b_base_bank
+	}
+	; Point NMI to trampoline at $3E91 (placed by slinky via
+	; nmi_trampoline.m — safe from bitmap rendering).
+	lda	#/nmi_trampoline
+	sta	0x0318
+	lda	#?nmi_trampoline
+	sta	0x0319
+	jmp	swap_disk_init
+
+swap_disk_disk:
 	movew	instructions,source
 	jsr	display_and_wait_for_key
 
@@ -149,6 +184,7 @@ swap_disk::
 	movew	#loader_start,buffer_pointer
 	jsr	d_write_segment
 
+swap_disk_init:
 	open_file	#charset_file		; read disk charset
 	seek_byte	#0000
 	read_segment	#charset_at,#1024
@@ -157,8 +193,10 @@ swap_disk::
 	jsr	all_sfx_off			; so music doesn't die
 ; wipe out all memory refferences
 
-	fill	object_table_hi,(static_end_of_heap - object_table_hi),0
-	fill	0x200, 0x2ff, 0			; wipeout 0x200 - 0x4ff
+	fill	object_table_hi,(end_of_tables - object_table_hi),0
+	fill	0x200, 0x114, 0			; wipeout 0x200 - 0x313
+	fill	0x031c, 0x1e3, 0		; wipeout 0x31c - 0x4fe
+							; skip 0x314-0x31b (IRQ/BRK/NMI vectors)
 
 ; 	init master delete block
 
@@ -245,6 +283,13 @@ title_music_v2::
 title_music_v2_pw::
 		include	"../Sounds/titles_music_v2.spb"
 title_music_end::
+
+; Stub copied to $0080 for EasyFlash reset (runs from ZP in Ultimax mode)
+cart_reset_stub:
+	lda	#0x00			; EF_ULTIMAX ($DE02 bit1=0→EXROM=1, bit0=0→GAME=0)
+	sta	EF_control
+	jmp	0xE000			; boot code in ROMH bank 0
+cart_reset_end:
 
 end_of_loader::
 

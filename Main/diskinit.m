@@ -34,8 +34,8 @@ init_disk::
 	movew	#0xea31,	0x0314	; irq
 	movew	#0xea31,	0x0316	; brk
 	movew	#0xfe47,	0x0318	; nmi
-	lda	#0xff
-	sta	0xdd0d
+	lda	#0x7f
+	sta	0xdd0d			; clear all CIA2 NMI sources
 ;	lda	#0
 	lda	0xdd03
 	and	#32			; save online bit
@@ -51,7 +51,7 @@ init_disk::
 	movew	#start_dest,	dest_addr
 
 	ldx	#24				;send	# of blocks
-	do	{	
+	do	{
 		stx	save_x
 		jsr	memory_write		;fopen to send
 		do	{
