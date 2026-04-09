@@ -37,11 +37,16 @@ region_special_case::
 		iny
 		lda	y[@response_data]
 		sta	desired_disk
-		cmp	disk_number
-		if (!equal) {
-		    jsr	get_loader_from_disk
-		    add16	response_data,#2, instructions
-		    jsr	swap_disk
+		ldx	use_cart		; cart mode: skip swap_disk
+		if (zero) {		;  (loader.obj at $7200 gets corrupted
+		    cmp	disk_number	;   by bitmap rendering — only safe
+		    if (!equal) {	;   to execute right after a fresh load)
+			jsr	get_loader_from_disk
+			add16	response_data,#2, instructions
+			jsr	swap_disk
+		    }
+		} else {
+		    sta	disk_number	; cart: accept any disk number
 		}
 	    } else {
 		inc16	response_data

@@ -111,6 +111,10 @@ init_keyboard::
 	moveb	#32,	text_line_prestart
 
 	jsr	init_vblank			; setup raster stuff
+	lda	use_cart			; cart mode: blank screen during
+	if (!zero) {			;  swap_disk loading (SEI in cart
+	    inc	screen_is_off		;  reads delays raster IRQ, causing
+	}				;  split-screen glitch with '0' chars)
 	jsr	rs232_open
 
 	bank_io_out

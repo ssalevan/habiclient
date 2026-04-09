@@ -6,7 +6,9 @@ chainto_filename::
 	byte	"NTK"
 
 quit_to_talk::
-	jsr		get_loader_from_disk
+	lda		#0			; force reload of loader.obj —
+	sta		loader_is_in_memory	;  bitmap rendering may have
+	jsr		get_loader_from_disk	;  corrupted $7200 since last load
 	jmp		loader_start
 	
 get_loader_from_disk::

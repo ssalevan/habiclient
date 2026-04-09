@@ -35,6 +35,7 @@ start_of_program:
 	jsr	init_disk
 	jsr	farmers_init			; init vblank, and var space
 	jsr	clear_back_drop			; fill backdrop with grid
+	clearb	screen_is_off			; screen on (was off for cart loading)
 	jsr	switch_pages			; display page 1 WHY???
 	jsr	resume_communications		; with host & get first region
 	inc	cursor_lock
