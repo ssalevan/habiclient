@@ -46,6 +46,7 @@
 	change_background_object,
 	async_workspace,
 	normal_NMI,
+	SYNCD_UP,
 	acia_open,
 	acia_resume,
 	acia_nmi_pending,

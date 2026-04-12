@@ -12,12 +12,25 @@ loader_start::
 	sta	screen_is_off			; so we can see error
 mif (debug_mode) {
 } melse {
-	lda	error_number			; ...start...
-	sta	arguments			;  (6.4)
-	lda	#1				; 1 arg (fe#)
-	ldx	#0				; to region
-	ldy	#MESSAGE_I_quit			;
-	jsr	send_arguments			; ...end...
+	; Send diagnostic crash report. All clients get the same 6-byte
+	; payload; the bridge handles both 1-byte (legacy) and 6-byte
+	; (current) by dispatching on arg count.
+	lda	error_number
+	sta	arguments
+	lda	error_regs_a
+	sta	arguments+1
+	lda	me_noid
+	sta	arguments+2
+	lda	heartbeat_counter
+	sta	arguments+3
+	lda	SEQOUT
+	sta	arguments+4
+	lda	INITST
+	sta	arguments+5
+	lda	#6
+	ldx	#0
+	ldy	#MESSAGE_I_quit
+	jsr	send_arguments
 }
 mif (dump_enabled) {
 	lda	quit_flag
