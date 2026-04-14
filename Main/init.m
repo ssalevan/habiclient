@@ -40,6 +40,14 @@ farmers_init::
 	sta	last_response_processed
 	sta	response_buffer_number
 	sta	text_left_hand_bound
+	sta	new_region_flag			; Initialize to $FF so sky_go's
+						; "if (plus) { rts }" check fails
+						; on the first user-initiated GO
+						; into the sky. RAM default 0 is
+						; positive, which silently blocks
+						; the first region-up transition
+						; until something else forces
+						; new_region_flag negative.
 
 	lda 	#0		; Turn off TEST, RINGMOD, and SYNC
 	sta	0xd400+0x04	;  bits for osc 0,1,2 (no SFX ever sets
