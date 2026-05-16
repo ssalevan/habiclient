@@ -36,6 +36,15 @@ beta.list
 Tools/muddle/class_equates.m
 mcmg.prg
 
+# Slinky/a65toprg memory-layout reports (regenerated each build)
+Main/SIZE
+Main/SIZE2
+
+# Flex/yacc generated sources (rebuilt from lexer.l / muddle.y)
+Tools/muddle/lexer.c
+Tools/muddle/muddle.c
+Tools/muddle/y.tab.h
+
 # Python things
 __pycache__/
 debug*.py
