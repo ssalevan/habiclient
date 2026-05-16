@@ -1,80 +1,131 @@
-Habiclient: C64 Client For Lucasfilm's Habitat
-==============================================
+Habitat for the Ultimate 64
+===========================
 
-[![Build Status](https://travis-ci.org/ssalevan/habiclient.svg?branch=master)](https://travis-ci.org/ssalevan/habiclient)
-[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/ssalevan/habiclient/blob/master/LICENSE)
-[![Twitter Follow](https://img.shields.io/twitter/follow/NeoHabitatProj.svg?style=social&label=Follow)](https://twitter.com/NeoHabitatProj)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/ssalevan/habiclient/blob/main/LICENSE)
 [![Slack](http://slack.neohabitat.org/badge.svg)](http://slack.neohabitat.org/)
 
-This repository contains the source code for the original Commodore 64 client used to
-connect to the world's first MMO,
-[Lucasfilm's Habitat](https://en.wikipedia.org/wiki/Habitat_(video_game)), alongside all
-necessary build tooling and scripting. If you're interested in learning more about how it
-works, we've included all the automation required to spin up fresh client disk images.
+This repository contains a modernised port of the original Commodore 64 client
+for [Lucasfilm's Habitat](https://en.wikipedia.org/wiki/Habitat_(video_game))
+— the world's first MMO, released in 1986 on QuantumLink. The port targets
+the [Ultimate 64](https://ultimate64.com) (an FPGA-based Commodore 64
+reimplementation), using its built-in SwiftLink/ACIA modem emulation to
+connect to a [Neohabitat](http://neohabitat.org) server over TCP rather than
+over a real 1200-baud modem.
 
-Builds are accomplished via [docker-compose](https://docs.docker.com/compose/), which
-will spin up a true powerhouse of a Commodore 64 development container then run through
-the client build procedure.
+The entire game ships as a single EasyFlash cartridge: launcher, decompressed
+game engine, behaviors, sounds, images, and head sprites all live in cartridge
+ROM, so loading times are effectively instant and no floppy swapping is
+required.
 
-Latest Release
---------------
+> **Note** — this project is not officially supported by the
+> [Neohabitat Project](http://neohabitat.org). It exists for preservation and
+> education. There are no guarantees of stability, only of adventure.
 
-The latest release of the Habitat client can be downloaded here:
-
--  [Habitat-A.d64](https://s3.amazonaws.com/habiclient/ssalevan/habiclient/5/5.1/Dist/Habitat-A.d64)
--  [Habitat-B.d64](https://s3.amazonaws.com/habiclient/ssalevan/habiclient/5/5.1/Dist/Habitat-B.d64)
-
-Please Note
+Quick Start
 -----------
 
-This project is not supported by the [Neohabitat Project](http://neohabitat.org) and is
-designed for educational purposes. We definitely accept pull requests, however, and
-encourage adventurous hacking, especially if you enjoy 6502 assembly. There are no
-guarantees of stability, only of adventure.
+1. Download the latest `Habitat-U64.zip` from the
+   [Releases page](https://github.com/ssalevan/habiclient/releases).
+2. Unzip and copy the `Habitat-U64/` folder onto your Ultimate 64's USB stick
+   (e.g. `USB1/HABICART/`).
+3. From the U64 menu, load `habitat-u64.cfg` into your current configuration
+   (and save it to flash if you want it to stick).
+4. Select `Habitat.crt` and choose *Run Cartridge*.
+5. Type a character name, press <kbd>RETURN</kbd> twice, and you're connected
+   to the Neohabitat server.
 
-Building
+The full install walkthrough — including modem-emulation settings, firmware
+requirements, troubleshooting, and "deploy from your laptop over the network"
+recipes — lives in [docs/U64.md](docs/U64.md).
+
+Hardware Requirements
+---------------------
+
+| Item             | Minimum                              | Notes                                          |
+|------------------|--------------------------------------|------------------------------------------------|
+| Ultimate 64      | Any revision (Mark I, II, Elite)     | The original C64 + Ultimate II+ also works.    |
+| Firmware         | 3.11 or later                        | Earlier firmware lacks the REST API.           |
+| Network          | Ethernet or WiFi (Elite-II only)     | Must be online to reach the Neohabitat server. |
+| Display          | NTSC by preference                   | PAL works; the `.cfg` configures NTSC.         |
+| Keyboard         | Stock C64 keyboard / U64 keyrah      | The launcher accepts standard PETSCII input.   |
+
+A `.cfg` file is provided that configures the U64's built-in modem emulation
+to expose a 6551-compatible ACIA at `$DF80` with NMI-driven receive — the
+exact register map the in-game serial driver expects. No external SwiftLink
+hardware is needed.
+
+Features
 --------
 
-To build the client, follow these steps:
+- **Single-cartridge install.** Boot the entire game (launcher + engine +
+  data) from one EasyFlash CRT image. No disk swapping; no copy-protection
+  worries.
+- **TCP networking via U64 modem emulation.** The U64 firmware exposes an
+  emulated SwiftLink at `$DF80`. The game's NMI-driven ACIA driver talks to
+  it directly, with TCP frames carried transparently to/from Neohabitat.
+- **Cart-mode safe disk emulation.** The original game streams behaviors and
+  images from Disk B at runtime. The cartridge bakes Disk B contents into
+  flash banks and serves them via an in-RAM disk-driver shim.
+- **REST-API deploy.** Push a new `Habitat.crt` straight to a U64 over HTTP
+  (`./upload_u64.sh`) — no SD card juggling, no power cycling.
+- **Legacy hardware still supported.** A stock C64 with a SwiftLink cartridge
+  (or a User Port RS-232 + null-modem) can still run the disk-image build via
+  `Habitat-A.d64` / `Habitat-B.d64`. See [docs/U64.md](docs/U64.md#legacy-builds).
 
-1.  Install [Docker](https://www.docker.com/get-started) for your computer's respective
-    platform.
-2.  From the checkout root, execute `dockerbuild`, which will cook up a special
-    `docker-compose.yml` file to trigger the build process.
-3.  When the build completes, the `Habitat-A.d64` and `Habitat-B.d64` images will land
-    in the `Dist` subdirectory.
+Build From Source
+-----------------
 
-Development
------------
+Builds run inside a Rocky Linux 9 x86_64 Docker container (so the same
+toolchain works on Linux, macOS Intel, and Apple Silicon via QEMU).
 
-We've supplied a `dockershell` script which will launch a Bash console within the Docker
-container used to build the client. The local repository will be mirrored into the 
-`/habiclient` directory within this container environment.
+```bash
+./dockercart       # Build the EasyFlash cartridge (Dist/Habitat.crt + Habitat-U64.zip)
+./dockerbuild      # Build classic 1541 disk images (Dist/Habitat-A.d64, Habitat-B.d64)
+./dockershell      # Interactive shell inside the build container
+```
 
-The `Makefile` at the root of the repository contains all necessary targets to build
-the client's disk images. In particular, running `make diska` will build the
-`Habitat-A.d64` image while running `make diskb` will build the `Habitat-B.d64` image.
+The build pipeline, individual `make` targets, and the memory map are
+documented in [CLAUDE.md](CLAUDE.md).
 
-Testing
+Repository Layout
+-----------------
+
+| Path             | What's there                                                                   |
+|------------------|--------------------------------------------------------------------------------|
+| `Main/`          | Game engine in Lucasfilm Macross 6502 assembly (~84 `.m` files).               |
+| `Launcher/`      | cc65 C launcher (login screen, modem setup, game bootstrap).                   |
+| `Behaviors/`     | 224 per-object action handlers (one `.m` file each).                           |
+| `Heap/`, `Io/`   | Equates and externs shared across game and launcher.                           |
+| `Tools/`         | Macross assembler, slinky linker, muddle data compiler, disk utilities.        |
+| `Dist/`          | Build artefacts: `Habitat.crt`, `Habitat-A.d64`, `Habitat-B.d64`, U64 zip.     |
+| `build_crt.py`   | Packs `habitat.prg` + `mcmg.prg` + Disk B into an EasyFlash CRT.               |
+| `u64_tool.py`    | Python wrapper around the U64 REST API (push CRTs, peek/poke memory, reset).  |
+| `u64_deploy.py`  | Uploads disk images to the U64's USB stick over FTP.                           |
+| `upload_u64.sh`  | One-shot "build CRT, push to U64, reboot into it" helper.                      |
+| `docs/U64.md`    | Detailed Ultimate 64 install + troubleshooting guide.                          |
+
+License
 -------
 
-Once client images have been built, you can test them by simply launching `Habitat-A.d64`
-in [VICE](https://vice-emu.sourceforge.io) under drive #8. As you might imagine, you can
-bring it up with `LOAD"*",8,1`. Once you've entered in your details and the Habitat
-splash screen appears, the client will ask you to insert the next disk. This is your cue
-to swap `Habitat-B.d64` into drive #8.
-
-Help!
------
-
-This client is not officially supported by the Neohabitat Project, but enterprising
-developers often congregate on the project's [Slack](http://slack.neohabitat.org) within
-the **#troubleshooting** room.
+Released under the MIT License (see `LICENSE`). Original Habitat client code
+© 1986 Lucasfilm Games / QuantumLink, released to the public archive by
+F. Randall Farmer in 2017.
 
 Credits
 -------
 
-All client code was written by Chip Morningstar, F. Randall Farmer, Aric Wilmunder and
-Janet Hunter. The Neohabitat launcher as well as the `a65toprg`, `filldisk`, `habdiska`,
-`mcmgtrim` and `mtobin` build tools were written by Gary Lake. Dockerization and
-buildmeistering support was provided by Steve Salevan.
+- **Original 6502 client (1986):** Chip Morningstar, F. Randall Farmer,
+  Aric Wilmunder, Janet Hunter.
+- **Build tooling, disk packers, original Neohabitat launcher:** Gary Lake.
+- **Dockerization and buildmeistering:** Steve Salevan.
+- **Ultimate 64 / SwiftLink port, EasyFlash cartridge build,
+  Neohabitat re-bring-up:** Steve Salevan, with ample 6502 hand-holding by
+  Claude.
+
+Community
+---------
+
+The Neohabitat project maintains a [Slack](http://slack.neohabitat.org)
+where preservation enthusiasts, retro-hardware people, and current Habitat
+players hang out. The `#troubleshooting` channel is the right place to ask
+for help with this client.
