@@ -26,8 +26,13 @@ required.
 Quick Start
 -----------
 
-1. Download the latest `Habitat-U64.zip` from the
-   [Releases page](https://github.com/ssalevan/habiclient/releases).
+1. Grab the latest cartridge bundle:
+   - **Latest stable:**
+     [`Habitat-U64.zip`](https://github.com/ssalevan/habiclient/releases/latest/download/Habitat-U64.zip)
+   - **Rolling (built from `main`):**
+     [`Habitat-U64.zip`](https://github.com/ssalevan/habiclient/releases/download/rolling/Habitat-U64.zip)
+   - **All releases:**
+     [github.com/ssalevan/habiclient/releases](https://github.com/ssalevan/habiclient/releases)
 2. Unzip and copy the `Habitat-U64/` folder onto your Ultimate 64's USB stick
    (e.g. `USB1/HABICART/`).
 3. From the U64 menu, load `habitat-u64.cfg` into your current configuration

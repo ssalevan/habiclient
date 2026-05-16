@@ -66,4 +66,11 @@ TROUBLESHOOTING
 
 SOURCE CODE
 -----------
-https://github.com/Museum-of-Art-and-Digital-Entertainment
+Source repository:
+  https://github.com/ssalevan/habiclient
+
+Detailed install + troubleshooting guide:
+  https://github.com/ssalevan/habiclient/blob/main/docs/U64.md
+
+All releases (stable + rolling):
+  https://github.com/ssalevan/habiclient/releases

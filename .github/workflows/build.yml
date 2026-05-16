@@ -77,10 +77,18 @@ jobs:
         run: |
           SUFFIX="${{ steps.meta.outputs.suffix }}"
           mkdir -p release
+          # Suffixed copies — useful for keeping older downloads identifiable.
           cp Dist/Habitat-U64.zip   "release/Habitat-U64-${SUFFIX}.zip"
           cp Dist/Habitat.crt       "release/Habitat-${SUFFIX}.crt"
           cp Dist/Habitat-A.d64     "release/Habitat-A-${SUFFIX}.d64"
           cp Dist/Habitat-B.d64     "release/Habitat-B-${SUFFIX}.d64"
+          # Unsuffixed copies — enable stable download URLs like
+          # https://github.com/<repo>/releases/latest/download/Habitat-U64.zip
+          # which always serve the most-recent release's artefact.
+          cp Dist/Habitat-U64.zip   release/Habitat-U64.zip
+          cp Dist/Habitat.crt       release/Habitat.crt
+          cp Dist/Habitat-A.d64     release/Habitat-A.d64
+          cp Dist/Habitat-B.d64     release/Habitat-B.d64
           ls -la release/
 
       - name: Upload workflow artifacts
