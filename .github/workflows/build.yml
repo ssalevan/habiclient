@@ -1,0 +1,155 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Required for `gh release create` from within the action.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build cartridge + disk images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          # Need full history so commit-count / git describe works in release notes.
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the Habitat build container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          tags: habiclient-build:ci
+          load: true
+          # Cache the Rocky Linux + cc65 + tass64 + cc1541 + exomizer toolchain build
+          # between runs. The first build takes ~5 minutes; subsequent runs reuse the
+          # cached layers and finish in seconds.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build cartridge + disk images
+        run: |
+          docker run --rm \
+            -v "${PWD}:/habiclient" \
+            -w /habiclient \
+            habiclient-build:ci \
+            bash -c 'export CC65_HOME=/usr/share/cc65 && make clean && make cart'
+
+      - name: Determine release metadata
+        id: meta
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            SUFFIX="$TAG"
+            TITLE="Habitat $TAG"
+            PRERELEASE="false"
+            ROLLING="false"
+          else
+            TAG="rolling"
+            SUFFIX="$SHORT_SHA"
+            TITLE="Rolling build ($SHORT_SHA)"
+            PRERELEASE="true"
+            ROLLING="true"
+          fi
+          {
+            echo "tag=$TAG"
+            echo "suffix=$SUFFIX"
+            echo "title=$TITLE"
+            echo "prerelease=$PRERELEASE"
+            echo "rolling=$ROLLING"
+            echo "short_sha=$SHORT_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Stage release artifacts
+        run: |
+          SUFFIX="${{ steps.meta.outputs.suffix }}"
+          mkdir -p release
+          cp Dist/Habitat-U64.zip   "release/Habitat-U64-${SUFFIX}.zip"
+          cp Dist/Habitat.crt       "release/Habitat-${SUFFIX}.crt"
+          cp Dist/Habitat-A.d64     "release/Habitat-A-${SUFFIX}.d64"
+          cp Dist/Habitat-B.d64     "release/Habitat-B-${SUFFIX}.d64"
+          ls -la release/
+
+      - name: Upload workflow artifacts
+        # Every build (including PRs) gets a downloadable artifact bundle.
+        # GitHub keeps these for 30 days; great for "did my PR break the disk layout?".
+        uses: actions/upload-artifact@v4
+        with:
+          name: habitat-${{ steps.meta.outputs.short_sha }}
+          path: release/
+          retention-days: 30
+
+      - name: Refresh rolling release (main branch only)
+        if: github.event_name == 'push' && steps.meta.outputs.rolling == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          TITLE="${{ steps.meta.outputs.title }}"
+          SHORT_SHA="${{ steps.meta.outputs.short_sha }}"
+
+          # Wipe the old rolling release + tag so the new one points at the latest
+          # commit and shows up with a fresh timestamp on the Releases page.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+
+          cat > /tmp/release-notes.md <<EOF
+          Automatic build from \`main\` at commit [\`$SHORT_SHA\`](https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA).
+
+          This is a rolling pre-release that's overwritten on every push to \`main\`. For stable releases see the tagged versions on the [Releases page](https://github.com/$GITHUB_REPOSITORY/releases).
+
+          ## Downloads
+
+          | File | What it is |
+          | --- | --- |
+          | \`Habitat-U64-$SHORT_SHA.zip\` | Cartridge bundle: \`.crt\` + \`habitat-u64.cfg\` + \`README.txt\`. **Start here for Ultimate 64.** |
+          | \`Habitat-$SHORT_SHA.crt\` | Bare EasyFlash cartridge image. |
+          | \`Habitat-A-$SHORT_SHA.d64\` | Classic boot disk (launcher + login). |
+          | \`Habitat-B-$SHORT_SHA.d64\` | Classic data disk (behaviors + images + sounds). |
+
+          See [docs/U64.md](https://github.com/$GITHUB_REPOSITORY/blob/main/docs/U64.md) for install instructions.
+          EOF
+
+          gh release create "$TAG" release/* \
+            --title "$TITLE" \
+            --notes-file /tmp/release-notes.md \
+            --prerelease \
+            --target "$GITHUB_SHA"
+
+      - name: Cut tagged release (v* tags only)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          TITLE="${{ steps.meta.outputs.title }}"
+
+          cat > /tmp/release-notes.md <<EOF
+          ## Downloads
+
+          | File | What it is |
+          | --- | --- |
+          | \`Habitat-U64-$TAG.zip\` | Cartridge bundle: \`.crt\` + \`habitat-u64.cfg\` + \`README.txt\`. **Start here for Ultimate 64.** |
+          | \`Habitat-$TAG.crt\` | Bare EasyFlash cartridge image. |
+          | \`Habitat-A-$TAG.d64\` | Classic boot disk (launcher + login). |
+          | \`Habitat-B-$TAG.d64\` | Classic data disk (behaviors + images + sounds). |
+
+          See [docs/U64.md](https://github.com/$GITHUB_REPOSITORY/blob/main/docs/U64.md) for install instructions.
+          EOF
+
+          gh release create "$TAG" release/* \
+            --title "$TITLE" \
+            --notes-file /tmp/release-notes.md \
+            --target "$GITHUB_SHA"

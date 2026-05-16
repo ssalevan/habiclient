@@ -1,7 +1,9 @@
 Habitat for the Ultimate 64
 ===========================
 
-[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/ssalevan/habiclient/blob/main/LICENSE)
+[![Build & Release](https://github.com/ssalevan/habiclient/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/ssalevan/habiclient/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/ssalevan/habiclient?include_prereleases&sort=date)](https://github.com/ssalevan/habiclient/releases)
+[![license](https://img.shields.io/github/license/ssalevan/habiclient)](https://github.com/ssalevan/habiclient/blob/main/LICENSE)
 [![Slack](http://slack.neohabitat.org/badge.svg)](http://slack.neohabitat.org/)
 
 This repository contains a modernised port of the original Commodore 64 client
