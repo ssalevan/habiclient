@@ -78,6 +78,18 @@ indirect_jump::
 	jmp	@(temp_ptr1)			; DoWhatIWant
 
 maintain_frame::
+	lda	region_is_ready			; region fully loaded => display must be ON.
+	if (!zero) {				;  screen_is_off is the region-load blank flag.
+	    clearb	screen_is_off		;  Clear it HERE, not at main_loop top, so the
+	}					;  clear ALSO runs when the foreground is trapped
+						;  in p_wait_for_a_free_buffer (RS232O via send_SG,
+						;  comm_control/contents_vector region path): that
+						;  spin calls maintain_frame every iteration but never
+						;  returns to main_loop, so a main_loop-top backstop
+						;  would never fire. region_is_ready is 0 throughout the
+						;  load (setup_for_region_contents_vector clears it) and
+						;  only set after render_region, so this never un-blanks
+						;  mid-transition.
 	jsr	print_any_qlink_messages
 	lda	graphics_mode		; 0 = bitmap ff= text 1=special bitmap
 	if (plus) {

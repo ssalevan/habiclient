@@ -74,6 +74,10 @@ Qlink_packet::	byte	"ZCCCCSSTSG",13
 p_packet_length:	byte	0
 p_character_timer:	byte	0	; in IRQs
 p_packet_type:		byte	0
+pwff_start_clock:	byte	0	; clock snapshot when p_wait_for_a_free_buffer
+					;  first finds BUFFS pinned (self-heal timer)
+define	pwff_timeout	=	200	; ~3.3s @60Hz NTSC: abandon a stranded
+					;  send window so the foreground can't deadlock
 ; -----------------------------------------------------------------
 RIBTM:
 maintain_rs232::
@@ -301,16 +305,32 @@ p_end_of_message:
 
 ; -----------------------------------------------------------------
 
-	do {
-	    clearb	p_send_packet_lock	; free IRQ for input process
-	    jsr	maintain_frame			; do something while we wait
-			    			; (will free input buffers &
-						; therfore allow winack's)
 p_wait_for_a_free_buffer:
-	    dec	p_send_packet_lock		; if one is free, LOCK it!
-	    lda	BUFFS
-	    cmp	#max_BUFFS
-	} while (equal)
+	dec	p_send_packet_lock		; if one is free, LOCK it!
+	lda	BUFFS
+	cmp	#max_BUFFS
+	if (equal) {				; all output buffers in flight, un-ACKed
+	    moveb	clock, pwff_start_clock	; start the stuck-timer (clock = frames)
+	    do {
+		clearb	p_send_packet_lock	; free IRQ for input process
+		jsr	maintain_frame		; do something while we wait
+						;  (frees input buffers -> winack's)
+		lda	clock			; SELF-HEAL: pinned at max_BUFFS too long?
+		sec
+		sbc	pwff_start_clock
+		cmp	#pwff_timeout
+		if (geq) {			; ~3.3s w/o ACK: the un-ACKed frames were
+		    clearb	BUFFS		;  corrupted in the region-load storm and the
+		    moveb	clock, pwff_start_clock	; server never got them. The C64 has
+		}				;  no resend trigger here and would deadlock
+						;  forever (no reticule / no TX). Abandon the
+						;  stranded window so the foreground reaches
+						;  here_i_am (same as the proven manual BUFFS=0).
+		dec	p_send_packet_lock	; re-LOCK and re-check
+		lda	BUFFS
+		cmp	#max_BUFFS
+	    } while (equal)
+	}
 	rts
 
 p_get_next_seq_number:
