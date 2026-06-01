@@ -49,10 +49,9 @@ wait_for_region::
 render_region::
 	lda	hereis_flag
 	if (zero) {
-	    movew	#rev_number,	source		;  6.4
-	    moveb	#black,		color		; 
-	    ldx	#0					; 
-	    jsr		draw_balloon_2			; 
+	    ; (rev_number "6.4" balloon draw removed: it was never cleared and
+	    ;  showed as the persistent blinking blue "blob" at the bottom-left
+	    ;  of the text/bitmap split.  The version isn't needed in-world.)
 	    jsr		all_sfx_off
 forced_render_region::
 	    jsr		black_out_bitmap
