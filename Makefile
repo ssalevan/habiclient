@@ -30,12 +30,24 @@ tools:
 	$(MAKE) -C Tools/muddle all
 	$(MAKE) -C Tools/slinky
 
+# Case-collision fix: beta.mud references actions/images whose names differ only
+# by case (avatar_get vs avatar_GET, peng vs Peng).  On the case-INSENSITIVE
+# macOS dev filesystem muddle resolves the mixed-case reference to the lowercase
+# .bin and builds fine; on case-SENSITIVE Linux (CI) it can't find them, silently
+# drops the item (0xFFFF slot), and corrupts action.dat/image.dat -> Fatal Error 1.
+# Materialize the muddle-expected names from the same lowercase .bin macOS resolves
+# to.  The "[ -e ] ||" guard makes this a no-op on macOS (target already resolves
+# to the source) and creates the file on Linux.
 behaviors: tools
 	$(MAKE) -C Behaviors
+	[ -e Actions/avatar_GET.bin ] || cp Actions/avatar_get.bin Actions/avatar_GET.bin
+	[ -e Actions/avatar_PUT.bin ] || cp Actions/avatar_put.bin Actions/avatar_PUT.bin
+	[ -e Actions/generic_CHANGESTATE.bin ] || cp Actions/generic_changeState.bin Actions/generic_CHANGESTATE.bin
 
 images: tools
 	$(MAKE) -C Images/Heads props
 	$(MAKE) -C Images/Props props
+	[ -e Images/Peng.bin ] || cp Images/peng.bin Images/Peng.bin
 
 sounds: tools
 	$(MAKE) -C Sounds sounds
