@@ -205,6 +205,23 @@ zap_duration:				; for immediate frequency and
 	rts
 
 next_ramp:
+	; Stack-overflow guard.  The end-effect chain below (jmp chain_sound_effect)
+	; re-enters next_ramp via "jsr next_ramp" per linked sound with NO bound, so
+	; a corrupt / self-referential sound stream recurses until the stack
+	; overflows.  This runs inside the vblank deferred block, so the runaway
+	; never returns, dec latch never executes, and the machine locks up (comms +
+	; input dead while the raster IRQ keeps firing) -- the observed lockup, whose
+	; stack was flooded with this routine's return address.  If the stack has
+	; grown dangerously deep, drop the offending voice instead of overflowing.
+	; (A compact SP check fits sfx.obj's tight memory box below $4000; a full
+	; per-pass re-entry counter does not.  The loopback path is already bounded
+	; by loop_count, so the chain is the only unbounded re-entry.)
+	tsx
+	cpx	#0x40			; SP < $40 -> stack ~75% full -> runaway chain
+	if (!carry) {
+	    ldx	voice
+	    jmp	terminate_voice	; clears the voice + rts, unwinding the chain
+	}
 	ldx	voice
 	lda	x[sfx_number]
 	tay
