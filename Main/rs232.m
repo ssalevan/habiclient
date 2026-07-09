@@ -133,21 +133,31 @@ acia_resume::
 	rts
 
 acia_put::
-	; Drain TX buffer by polling TDRE (Transmit Data Register
-	; Empty).  VICE clears TDRE on write and re-sets it after
-	; the baud-rate character time — no WDC 65C51 TDRE bug.
-	; The poll loop naturally rate-limits to wire speed.
-acia_put_loop:
+	; Send AT MOST ONE byte per call.  The real WDC 65C51 — and the U64's
+	; 6551-accurate ACIA — has the TDRE bug: the Transmit Data Register Empty
+	; bit reads SET immediately after a write, even while the byte is still
+	; shifting out.  The old code LOOPED here (send until buffer empty / TDRE
+	; clear); with TDRE always reading ready it drained the entire send buffer
+	; into the one-byte transmit register faster than the wire could shift it,
+	; overrunning it and CORRUPTING the client's own outbound frames.  That
+	; showed up at the server as garbage / too-short QLink frames, worst during
+	; TX bursts — a region-change request + its acks/NAKs — i.e. the "infinite
+	; region transition".  VICE clears TDRE correctly so the loop was invisible
+	; in emulation (where E2E was validated).
+	;
+	; One byte per call paces TX to the acia_put cadence — every RX NMI
+	; (nmi_trampoline) plus 60Hz maintain_rs232 — which tracks wire speed,
+	; needs no trustworthy TDRE, and is independent of CPU turbo.
 	ldy	rs232_send_buffer_start
 	cpy	rs232_send_buffer_end
 	if (equal) {rts}		; buffer empty
 	lda	ACIA_status
 	and	#ACIA_ST_TDRE
-	if (zero) {rts}			; TX busy — byte still shifting out
+	if (zero) {rts}			; TX busy (honored on VICE; U64 lies, cadence paces)
 	lda	y[@rs232_output_buffer]
 	sta	ACIA_data
 	inc	rs232_send_buffer_start
-	jmp	acia_put_loop
+	rts				; ONE byte per call — never loop (WDC TDRE overrun)
 
 acia_poll_rx::
 	; Safety drain + ensure NMI enabled — called from maintain_rs232
