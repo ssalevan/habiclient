@@ -160,33 +160,17 @@ acia_put::
 	rts				; ONE byte per call — never loop (WDC TDRE overrun)
 
 acia_poll_rx::
-	; Safety drain + ensure NMI enabled — called from maintain_rs232
-	; at 60Hz.  The NMI handler now stays armed (no CMD=$0B), so
-	; this is normally a no-op.  It serves as a safety net: if a
-	; byte arrived between the NMI drain loop exit and RTI (rare
-	; race), this catches it.  Also ensures CMD=$09 is set in case
-	; anything unexpected cleared it.
+	; Do NOT drain the ACIA into the ring here.  acia_NMI is the SOLE ring
+	; writer: it drains all pending bytes and its end-of-drain edge-toggle
+	; re-arms itself to catch any straggler.  This routine USED to also drain
+	; into rs232_input_buffer via rs232_rcv_buffer_end — and it is called
+	; thousands of times/sec from check_for_new_response's busy-wait, so it RACED
+	; the NMI: two writers, one un-synchronized pointer.  A byte from one writer
+	; got clobbered by the other, mis-assembling the frame → bad CRC / wrong
+	; sequence → the client generated SPURIOUS NAKs even though the TCP link
+	; dropped nothing.  We now only make sure the NMI stays armed; it does all
+	; the draining, race-free.
 acia_poll_drain::
-	lda	ACIA_status
-	and	#ACIA_ST_RDRF
-	if (!zero) {
-		ldy	rs232_rcv_buffer_end
-		iny
-		cpy	rs232_rcv_buffer_start
-		if (!equal) {
-			sty	rs232_rcv_buffer_end
-			dey
-			lda	ACIA_data
-			sta	y[@rs232_input_buffer]
-		} else {
-			lda	ACIA_data	; must read to clear RDRF
-			lda	#0x04
-			ora	rs232_status
-			sta	rs232_status
-		}
-		jmp	acia_poll_drain		; check for more
-	}
-	; RDRF clear → NMI line HIGH.  Re-enable NMI.
 	lda	#ACIA_CMD_RX_IRQ
 	sta	ACIA_command
 	rts

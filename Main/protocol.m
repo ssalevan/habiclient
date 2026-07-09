@@ -67,6 +67,8 @@ define	regionproc_crash_timer_value  =	6*60*3	; no RP communications
 regionproc_crash_timer::	word	regionproc_crash_timer_value
 heartbeat_counter::		byte	lost_carrier_HB_count
 heartbeat_wait:	byte	2
+hb_idle_sub:	byte	0	; 60Hz sub-counter for the heartbeat keepalive (NOT
+				; clocked off RS232I calls — that caused a ping flood)
 Qlink_packet::	byte	"ZCCCCSSTSG",13
 					; for SG and other messages to Host
 
@@ -91,8 +93,22 @@ maintain_rs232::
 
 	moveb	#0xff,p_send_packet_lock
 	jsr	p_send_a_buffer		; if we can, put buffer out!
+	jsr	rs232_hb_60hz		; heartbeat keepalive at real 60Hz, NOT per RS232I call
 	jsr	RS232I			; take care of input
 	clearb	p_send_packet_lock
+	rts
+
+rs232_hb_60hz:
+	; Heartbeat keepalive, clocked at 60Hz (maintain_rs232 runs once per vblank).
+	; hb_idle_sub wraps every 256 vblanks (~4.3s); heartbeat_wait (=2) makes the
+	; heartbeat fire ~every 8.5s of an IDLE link.  hb_idle_sub + heartbeat_wait are
+	; reset on any RX (p_get_byte) or TX (p_transmit_buffer), so a busy link never
+	; heartbeats — it's driven by real data + courtesy ACKs, as designed.
+	dec	hb_idle_sub
+	if (zero) {
+	    dec	heartbeat_wait
+	    if (zero) {jmp	send_heartbeat}		; sends heartbeat, then rts to our caller
+	}
 	rts
 
 ; -----------------------------------------------------------------
@@ -168,17 +184,24 @@ p_transmit_buffer:
 	stx	rs232_send_buffer_end
 
 	moveb	#heartbeat_value, heartbeat_wait	; somethins goin on
+	clearb	hb_idle_sub			; TX = activity: reset heartbeat idle timer
 	moveb	#ACKNUM,ACKNED		; count down for courtesy ACK to host.
 	rts
 
 ; -----------------------------------------------------------------
 
 RS232I:
-	dec	p_character_timer	; 0 = 255 IRQs, throw away stuff
+	; p_character_timer is the incomplete-packet THROW-AWAY timeout.  It stays
+	; here, clocked per-call: the ACIA RX path runs RS232I from the NMI and from
+	; check_for_new_response's tight busy-wait, and needs the aggressive timeout to
+	; recover partial/corrupt packets.  The HEARTBEAT is NO LONGER clocked here —
+	; doing so fired it ~14x/sec (RS232I runs thousands of times/sec), a ping flood
+	; that saturated the link AND suppressed the courtesy-ACK flow control (each
+	; heartbeat's p_transmit_buffer re-armed ACKNED).  It is now a real 60Hz
+	; keepalive in rs232_hb_60hz (see maintain_rs232).
+	dec	p_character_timer
 	if (zero) {
 	    jsr	p_throw_away_input
-	    dec	heartbeat_wait
-	    if (zero) {jmp	send_heartbeat}		;*
 	}
 
 p_get_byte:
@@ -191,6 +214,7 @@ p_get_byte:
 	if (equal) {rts}			; nothing to read...
 
 	moveb	#heartbeat_value, heartbeat_wait
+	clearb	hb_idle_sub			; RX = activity: reset heartbeat idle timer
 	clearb	p_character_timer		; hey, we got one!
 
 	lda	y[@rs232_input_buffer]
